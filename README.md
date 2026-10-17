@@ -90,6 +90,14 @@ If you're seeing random words scattered throughout the text of a downloaded fic,
 
 You can also check the HTML source for elements with a `class` attribute — common class names are `poison`, `hidden`, or custom names the author chose. The default in `fic-poison` is `poison`.
 
+## Web tool
+
+Don't want to run Python? Use the **[online fic cleaner](https://claude.ai/artifact/7oRb3dYGqqkB1uW2AhmWSR)** — paste your HTML, get clean text back. Everything runs in your browser; your fic never leaves your device.
+
+## Related
+
+- [TricksOfLoki/fic-poison](https://github.com/TricksOfLoki/fic-poison) — the original poisoning script this is an antidote for
+
 ## Limitations
 
 - Only handles files poisoned by [TricksOfLoki/fic-poison](https://github.com/TricksOfLoki/fic-poison) specifically. Other poisoning methods would need different removal logic.
