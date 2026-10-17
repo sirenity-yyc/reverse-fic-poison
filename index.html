@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fic Cleaner — reverse-fic-poison</title>
+  <meta name="description" content="Antidote for fic-poison — paste your poisoned AO3 fic HTML and strip out the junk text. Runs entirely in your browser.">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    :root {
+      --bg: #fafaf8;
+      --surface: #ffffff;
+      --surface-alt: #f3f2ee;
+      --border: #e2e0da;
+      --fg: #1a1a18;
+      --fg-muted: #6b6960;
+      --accent: #5b4fc7;
+      --accent-hover: #4a3fb3;
+      --accent-text: #ffffff;
+      --success: #2d8a4e;
+      --success-bg: #e8f5ec;
+      --warning: #b45309;
+      --warning-bg: #fef3c7;
+      --code-bg: #f0efe8;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --radius: 10px;
+      --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141413;
+        --surface: #1e1e1c;
+        --surface-alt: #262624;
+        --border: #3a3937;
+        --fg: #e8e7e3;
+        --fg-muted: #9b9890;
+        --accent: #8b80ef;
+        --accent-hover: #9d94f5;
+        --accent-text: #141413;
+        --success: #4ade80;
+        --success-bg: #1a2e22;
+        --warning: #fbbf24;
+        --warning-bg: #2a2210;
+        --code-bg: #262624;
+        --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+        color-scheme: dark;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0 16px;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 0 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 1rem 0 0;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.25rem;
+    }
+
+    .subtitle {
+      color: var(--fg-muted);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .subtitle a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .subtitle a:hover {
+      text-decoration: underline;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-alt);
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .card-header label {
+      font-weight: 500;
+      font-size: 0.875rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+    }
+
+    .class-input-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--fg-muted);
+    }
+
+    .class-input-group input {
+      width: 120px;
+      padding: 0.3rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .class-input-group input:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      border-color: transparent;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 1rem 1.25rem;
+      border: none;
+      background: var(--surface);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.7;
+      resize: vertical;
+      box-sizing: border-box;
+      tab-size: 2;
+    }
+
+    textarea:focus { outline: none; }
+
+    textarea::placeholder {
+      color: var(--fg-muted);
+      opacity: 0.6;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-text);
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: var(--surface-alt);
+      color: var(--fg);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: var(--border); }
+    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .stats {
+      display: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      line-height: 1.5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stats.success {
+      display: block;
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);
+    }
+
+    .stats.warning {
+      display: block;
+      background: var(--warning-bg);
+      color: var(--warning);
+      border: 1px solid color-mix(in srgb, var(--warning) 20%, transparent);
+    }
+
+    .stats strong { font-weight: 600; }
+
+    #output-section { display: none; }
+
+    #output-section.visible {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .output-actions {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.875rem 1.25rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface-alt);
+    }
+
+    .privacy-note {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      padding: 0.5rem 0;
+      line-height: 1.5;
+    }
+
+    .privacy-note svg {
+      vertical-align: -2px;
+      margin-right: 2px;
+    }
+
+    .how-it-works { padding: 1.25rem; }
+
+    .how-it-works summary {
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--fg-muted);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .how-it-works summary::-webkit-details-marker { display: none; }
+
+    .how-it-works summary .arrow {
+      transition: transform 0.2s;
+      font-size: 0.7rem;
+    }
+
+    .how-it-works[open] summary .arrow { transform: rotate(90deg); }
+
+    .how-it-works .content {
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      color: var(--fg-muted);
+      line-height: 1.7;
+    }
+
+    .how-it-works .content p { margin: 0.75rem 0; }
+
+    .how-it-works .content code {
+      background: var(--code-bg);
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.85em;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--fg-muted);
+      padding-top: 0.5rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 500px) {
+      h1 { font-size: 1.4rem; }
+      .card-header { flex-direction: column; align-items: flex-start; }
+      textarea { min-height: 160px; font-size: 0.75rem; }
+      .actions { flex-direction: column; }
+      .actions .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Fic Cleaner</h1>
+      <p class="subtitle">Antidote for <a href="https://github.com/TricksOfLoki/fic-poison" target="_blank" rel="noopener">fic-poison</a> &mdash; paste your HTML, get clean text back</p>
+    </header>
+
+    <div class="card">
+      <div class="card-header">
+        <label for="input">Poisoned HTML</label>
+        <div class="class-input-group">
+          <label for="class-input">Class:</label>
+          <input type="text" id="class-input" value="poison" placeholder="poison" spellcheck="false" autocomplete="off">
+        </div>
+      </div>
+      <textarea id="input" placeholder="Paste your poisoned fic HTML here...&#10;&#10;Look for random words scattered through the text, or whole paragraphs of nonsense between real paragraphs. That's the poison."></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="clean-btn" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 5.5L6.5 12.5L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Clean it
+      </button>
+      <button class="btn btn-secondary" id="clear-btn" disabled>Clear</button>
+    </div>
+
+    <div id="stats" class="stats"></div>
+
+    <div id="output-section" class="card">
+      <div class="card-header">
+        <label for="output">Cleaned Output</label>
+      </div>
+      <textarea id="output" readonly placeholder="Cleaned HTML will appear here..."></textarea>
+      <div class="output-actions">
+        <button class="btn btn-secondary" id="copy-btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" stroke="currentColor" stroke-width="1.5"/></svg>
+          Copy
+        </button>
+        <button class="btn btn-secondary" id="download-btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M3 12v1.5A1.5 1.5 0 004.5 15h7a1.5 1.5 0 001.5-1.5V12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download .html
+        </button>
+      </div>
+    </div>
+
+    <p class="privacy-note">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Everything runs in your browser. Your fic never leaves your device.
+    </p>
+
+    <details class="how-it-works card">
+      <summary><span class="arrow">&#9654;</span> How does this work?</summary>
+      <div class="content">
+        <p>The <a href="https://github.com/TricksOfLoki/fic-poison" target="_blank" rel="noopener">fic-poison</a> script injects junk text into AO3 fanfiction HTML to disrupt AI training scrapers. It hides the garbage from human readers using CSS workskins, but scrapers doing raw text extraction pick it all up.</p>
+        <p>It has two modes. <strong>Tame mode</strong> inserts whole paragraphs of random words as <code>&lt;p class="poison"&gt;</code> blocks between your real paragraphs. <strong>Default mode</strong> is sneakier &mdash; it threads single junk words throughout the text inside <code>&lt;span&gt;</code> tags, and uses a zero-width space character to break the HTML tag so browsers don't even parse it.</p>
+        <p>This tool runs three regex passes: it strips the tame-mode paragraphs, strips the default-mode spans (with or without the zero-width space trick), and sweeps up any stray zero-width spaces left behind. It handles both modes at once &mdash; you don't need to know which one was used.</p>
+        <p>If the author used a custom class name instead of <code>poison</code>, change the class field above to match. You can find it by searching the HTML for <code>class="something"</code> on tags containing random words.</p>
+      </div>
+    </details>
+
+    <footer>
+      <a href="https://github.com/sirenity-yyc/reverse-fic-poison" target="_blank" rel="noopener">GitHub</a> &middot; <a href="https://github.com/TricksOfLoki/fic-poison" target="_blank" rel="noopener">What is fic-poison?</a> &middot; MIT License
+    </footer>
+  </div>
+
+  <script>
+    const ZWSP = '​';
+
+    function removePoison(content, poisonClass) {
+      let cleaned = content;
+
+      // 1. Tame mode: <p class="poison">...junk...</p>
+      const tamePattern = new RegExp(
+        '\\n?<p\\s+class=["\']' + escapeRegex(poisonClass) + '["\']>' +
+        '[^<]*' +
+        '<\\/p>',
+        'gi'
+      );
+      cleaned = cleaned.replace(tamePattern, '');
+
+      // 2. Default mode: <(ZWSP?)span class="poison">...word...<(ZWSP?)/span>
+      const defaultPattern = new RegExp(
+        '<' + ZWSP + '?span\\s+class=["\']' + escapeRegex(poisonClass) + '["\']>' +
+        '[^<]*' +
+        '<' + ZWSP + '?\\/span>',
+        'gi'
+      );
+      cleaned = cleaned.replace(defaultPattern, '');
+
+      // 3. Stray ZWSP cleanup
+      cleaned = cleaned.replaceAll('<' + ZWSP, '<');
+      cleaned = cleaned.replaceAll(ZWSP + '>', '>');
+
+      return cleaned;
+    }
+
+    function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // DOM
+    const input = document.getElementById('input');
+    const output = document.getElementById('output');
+    const classInput = document.getElementById('class-input');
+    const cleanBtn = document.getElementById('clean-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const statsEl = document.getElementById('stats');
+    const outputSection = document.getElementById('output-section');
+
+    input.addEventListener('input', () => {
+      const hasContent = input.value.trim().length > 0;
+      cleanBtn.disabled = !hasContent;
+      clearBtn.disabled = !hasContent;
+    });
+
+    cleanBtn.addEventListener('click', () => {
+      const raw = input.value;
+      if (!raw.trim()) return;
+
+      const poisonClass = classInput.value.trim() || 'poison';
+      const cleaned = removePoison(raw, poisonClass);
+      const removed = raw.length - cleaned.length;
+
+      output.value = cleaned;
+      outputSection.classList.add('visible');
+
+      if (removed > 0) {
+        const pct = ((removed / raw.length) * 100).toFixed(1);
+        statsEl.className = 'stats success';
+        statsEl.innerHTML = '<strong>' + removed.toLocaleString() + '</strong> characters of poison removed (' + pct + '% of file)';
+      } else {
+        statsEl.className = 'stats warning';
+        statsEl.innerHTML = 'No poison found with class <strong>"' + poisonClass + '"</strong>. Check that the class name matches what was used, or inspect the HTML for the actual class.';
+      }
+
+      output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      output.value = '';
+      outputSection.classList.remove('visible');
+      statsEl.className = 'stats';
+      statsEl.innerHTML = '';
+      cleanBtn.disabled = true;
+      clearBtn.disabled = true;
+      input.focus();
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const text = output.value;
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          const orig = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 5.5L6.5 12.5L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied!';
+          setTimeout(() => { copyBtn.innerHTML = orig; }, 1500);
+        }).catch(() => { output.select(); });
+      } else {
+        output.select();
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const text = output.value;
+      if (!text) return;
+      const blob = new Blob([text], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fic_cleaned.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // File drop support
+    input.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      input.style.outline = '2px dashed var(--accent)';
+    });
+
+    input.addEventListener('dragleave', () => {
+      input.style.outline = '';
+    });
+
+    input.addEventListener('drop', (e) => {
+      e.preventDefault();
+      input.style.outline = '';
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          input.value = ev.target.result;
+          cleanBtn.disabled = false;
+          clearBtn.disabled = false;
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    // File input fallback for mobile
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.html,.htm,.txt';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          input.value = ev.target.result;
+          cleanBtn.disabled = false;
+          clearBtn.disabled = false;
+        };
+        reader.readAsText(file);
+      }
+    });
+  </script>
+</body>
+</html>

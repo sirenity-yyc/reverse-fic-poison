@@ -92,7 +92,7 @@ You can also check the HTML source for elements with a `class` attribute — com
 
 ## Web tool
 
-Don't want to run Python? Use the **[online fic cleaner](https://claude.ai/artifact/7oRb3dYGqqkB1uW2AhmWSR)** — paste your HTML, get clean text back. Everything runs in your browser; your fic never leaves your device.
+Don't want to run Python? Use the **[online fic cleaner](https://sirenity-yyc.github.io/reverse-fic-poison/)** — paste your HTML, get clean text back. Everything runs in your browser; your fic never leaves your device.
 
 ## Related
 
